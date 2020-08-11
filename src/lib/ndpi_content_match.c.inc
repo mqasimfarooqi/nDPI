@@ -8031,6 +8031,11 @@ https://www.regular-expressions.info/email.html
 /* ****************************************************** */
 
 ndpi_protocol_match host_match[] = {
+  {".fbcdn.com", NULL, "\\.fbcdn" TLD, "Facebook", NDPI_PROTOCOL_FACEBOOK, NDPI_PROTOCOL_CATEGORY_SOCIAL_NETWORK, NDPI_PROTOCOL_FUN},
+  {".mozilla.org", NULL, "\\.mozilla" TLD, "Mozilla", NDPI_PROTOCOL_MOZILLA, NDPI_PROTOCOL_CATEGORY_SW_UPDATE, NDPI_PROTOCOL_ACCEPTABLE},
+  {"get.adobe.com", NULL, "\\.get\\.adobe" TLD, "Adobe", NDPI_PROTOCOL_ADOBE, NDPI_PROTOCOL_CATEGORY_SW_UPDATE, NDPI_PROTOCOL_ACCEPTABLE},
+  {"gvt1.com", NULL, "gvt1" TLD, "Google", NDPI_PROTOCOL_GOOGLE, NDPI_PROTOCOL_CATEGORY_SW_UPDATE, NDPI_PROTOCOL_ACCEPTABLE},
+
   { "s3.ll.dash.row.aiv-cdn.net", NULL, "s3\\.ll\\.dash\\.row\\.aiv-cdn\\.net",          "AmazonVideo",      NDPI_PROTOCOL_AMAZON_VIDEO, NDPI_PROTOCOL_CATEGORY_STREAMING, NDPI_PROTOCOL_FUN },
   { "s3-dub.cf.dash.row.aiv-cdn.net", NULL, "s3-dub\\.cf\\.dash\\.row\\.aiv-cdn\\.net",  "AmazonVideo",      NDPI_PROTOCOL_AMAZON_VIDEO, NDPI_PROTOCOL_CATEGORY_STREAMING, NDPI_PROTOCOL_FUN },
   { "dmqdd6hw24ucf.cloudfront.net", NULL, "dmqdd6hw24ucf\\.cloudfront\\.net",            "AmazonVideo",      NDPI_PROTOCOL_AMAZON_VIDEO, NDPI_PROTOCOL_CATEGORY_STREAMING, NDPI_PROTOCOL_FUN },
