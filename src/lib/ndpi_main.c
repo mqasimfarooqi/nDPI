@@ -2495,6 +2495,7 @@ void test_lru_handler(ndpi_lru_cache_type cache_type, u_int32_t proto, u_int32_t
 /* ******************************************************************** */
 
 struct ndpi_detection_module_struct *ndpi_init_detection_module(ndpi_init_prefs prefs) {
+    printf("nDPI module loaded :- 1\n");
   struct ndpi_detection_module_struct *ndpi_str = ndpi_malloc(sizeof(struct ndpi_detection_module_struct));
   int i;
 

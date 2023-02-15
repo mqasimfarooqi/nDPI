@@ -137,21 +137,20 @@ static u_int32_t ndpi_tls_refine_master_protocol(struct ndpi_detection_module_st
 }
 
 /* **************************************** */
-
-void ndpi_search_tls_tcp_memory(struct ndpi_detection_module_struct *ndpi_struct,
-				struct ndpi_flow_struct *flow) {
-  struct ndpi_packet_struct *packet = &ndpi_struct->packet;
-  u_int avail_bytes;
-
-  /* TCP */
+void ndpi_search_tls_tcp_memory_print_handling_tls_tcp_flow(struct ndpi_detection_module_struct *ndpi_struct,
+				struct ndpi_flow_struct *flow, struct ndpi_packet_struct *packet) {
+                      /* TCP */
 #ifdef DEBUG_TLS_MEMORY
   printf("[TLS Mem] Handling TCP/TLS flow [payload_len: %u][buffer_len: %u][direction: %u]\n",
 	 packet->payload_packet_len,
 	 flow->l4.tcp.tls.message.buffer_len,
 	 packet->packet_direction);
 #endif
+}
 
-  if(flow->l4.tcp.tls.message.buffer == NULL) {
+void ndpi_search_tls_tcp_memory_init_tls_tcp_buffer(struct ndpi_detection_module_struct *ndpi_struct,
+				struct ndpi_flow_struct *flow, struct ndpi_packet_struct *packet) {
+    if(flow->l4.tcp.tls.message.buffer == NULL) {
     /* Allocate buffer */
     flow->l4.tcp.tls.message.buffer_len = 2048, flow->l4.tcp.tls.message.buffer_used = 0;
     flow->l4.tcp.tls.message.buffer = (u_int8_t*)ndpi_malloc(flow->l4.tcp.tls.message.buffer_len);
@@ -163,11 +162,19 @@ void ndpi_search_tls_tcp_memory(struct ndpi_detection_module_struct *ndpi_struct
     printf("[TLS Mem] Allocating %u buffer\n", flow->l4.tcp.tls.message.buffer_len);
 #endif
   }
+}
 
-  avail_bytes = flow->l4.tcp.tls.message.buffer_len - flow->l4.tcp.tls.message.buffer_used;
 
-  if(avail_bytes < packet->payload_packet_len) {
-    u_int new_len = flow->l4.tcp.tls.message.buffer_len + packet->payload_packet_len - avail_bytes + 1;
+void ndpi_search_tls_tcp_memory_calculate_buffer_length(struct ndpi_detection_module_struct *ndpi_struct,
+				struct ndpi_flow_struct *flow, struct ndpi_packet_struct *packet, u_int* avail_bytes) {
+    *avail_bytes = flow->l4.tcp.tls.message.buffer_len - flow->l4.tcp.tls.message.buffer_used;
+}
+
+
+void ndpi_search_tls_tcp_memory_allocate_tls_tcp_buffer(struct ndpi_detection_module_struct *ndpi_struct,
+				struct ndpi_flow_struct *flow, struct ndpi_packet_struct *packet, u_int* avail_bytes) {
+    if(*avail_bytes < packet->payload_packet_len) {
+    u_int new_len = flow->l4.tcp.tls.message.buffer_len + packet->payload_packet_len - *avail_bytes + 1;
     void *newbuf  = ndpi_realloc(flow->l4.tcp.tls.message.buffer,
 				 flow->l4.tcp.tls.message.buffer_len, new_len);
     if(!newbuf) return;
@@ -178,10 +185,13 @@ void ndpi_search_tls_tcp_memory(struct ndpi_detection_module_struct *ndpi_struct
 
     flow->l4.tcp.tls.message.buffer = (u_int8_t*)newbuf;
     flow->l4.tcp.tls.message.buffer_len = new_len;
-    avail_bytes = flow->l4.tcp.tls.message.buffer_len - flow->l4.tcp.tls.message.buffer_used;
+    *avail_bytes = flow->l4.tcp.tls.message.buffer_len - flow->l4.tcp.tls.message.buffer_used;
   }
+}
 
-  if(packet->payload_packet_len > 0 && avail_bytes >= packet->payload_packet_len) {
+void ndpi_search_tls_tcp_memory_copy(struct ndpi_detection_module_struct *ndpi_struct,
+				struct ndpi_flow_struct *flow, struct ndpi_packet_struct *packet, u_int* avail_bytes) {
+    if(packet->payload_packet_len > 0 && *avail_bytes >= packet->payload_packet_len) {
     u_int8_t ok = 0;
 
     if(flow->l4.tcp.tls.message.next_seq[packet->packet_direction] != 0) {
@@ -214,6 +224,24 @@ void ndpi_search_tls_tcp_memory(struct ndpi_detection_module_struct *ndpi_struct
 #endif
     }
   }
+}
+
+void ndpi_search_tls_tcp_memory(struct ndpi_detection_module_struct *ndpi_struct,
+				struct ndpi_flow_struct *flow) {
+  struct ndpi_packet_struct *packet = &ndpi_struct->packet;
+  u_int avail_bytes;
+
+  ndpi_search_tls_tcp_memory_print_handling_tls_tcp_flow(ndpi_struct, flow, packet);
+  ndpi_search_tls_tcp_memory_init_tls_tcp_buffer(ndpi_struct, flow, packet);
+  
+
+  ndpi_search_tls_tcp_memory_calculate_buffer_length(ndpi_struct, flow, packet, &avail_bytes);
+  ndpi_search_tls_tcp_memory_allocate_tls_tcp_buffer(ndpi_struct, flow, packet, &avail_bytes);
+
+  ndpi_search_tls_tcp_memory_copy(ndpi_struct, flow, packet, &avail_bytes);
+  
+
+  
 }
 
 /* **************************************** */
