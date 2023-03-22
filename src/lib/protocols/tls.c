@@ -189,22 +189,47 @@ void ndpi_search_tls_tcp_memory_allocate_tls_tcp_buffer(struct ndpi_detection_mo
   }
 }
 
-void ndpi_search_tls_tcp_memory_copy(struct ndpi_detection_module_struct *ndpi_struct,
+bool ndpi_search_tls_tcp_memory_copy_check_1(struct ndpi_detection_module_struct *ndpi_struct,
 				struct ndpi_flow_struct *flow, struct ndpi_packet_struct *packet, u_int* avail_bytes) {
-    if(packet->payload_packet_len > 0 && *avail_bytes >= packet->payload_packet_len) {
-    u_int8_t ok = 0;
+    return flow->l4.tcp.tls.message.next_seq[packet->packet_direction] != 0;
+}
 
-    if(flow->l4.tcp.tls.message.next_seq[packet->packet_direction] != 0) {
-      if(ntohl(packet->tcp->seq) == flow->l4.tcp.tls.message.next_seq[packet->packet_direction])
-	ok = 1;
+bool ndpi_search_tls_tcp_memory_copy_check_2(struct ndpi_detection_module_struct *ndpi_struct,
+				struct ndpi_flow_struct *flow, struct ndpi_packet_struct *packet, u_int* avail_bytes) {
+    return ntohl(packet->tcp->seq) == flow->l4.tcp.tls.message.next_seq[packet->packet_direction];
+}
+
+void ndpi_search_tls_tcp_memory_copy_check(struct ndpi_detection_module_struct *ndpi_struct,
+				struct ndpi_flow_struct *flow, struct ndpi_packet_struct *packet, u_int* avail_bytes, u_int8_t* ok) {
+    if(ndpi_search_tls_tcp_memory_copy_check_1(ndpi_struct, flow, packet, avail_bytes)) {
+      if(ndpi_search_tls_tcp_memory_copy_check_2(ndpi_struct, flow, packet, avail_bytes))
+	*ok = 1;
     } else
-      ok = 1;
+      *ok = 1;
+}
 
-    if(ok) {
-      memcpy(&flow->l4.tcp.tls.message.buffer[flow->l4.tcp.tls.message.buffer_used],
+void ndpi_search_tls_tcp_memory_copy_actual_memcpy(struct ndpi_detection_module_struct *ndpi_struct,
+				struct ndpi_flow_struct *flow, struct ndpi_packet_struct *packet, u_int* avail_bytes) {
+    memcpy(&flow->l4.tcp.tls.message.buffer[flow->l4.tcp.tls.message.buffer_used],
 	     packet->payload, packet->payload_packet_len);
+}
 
-      flow->l4.tcp.tls.message.buffer_used += packet->payload_packet_len;
+void ndpi_search_tls_tcp_memory_copy_actual_increment_buffer_used(struct ndpi_detection_module_struct *ndpi_struct,
+				struct ndpi_flow_struct *flow, struct ndpi_packet_struct *packet, u_int* avail_bytes) {
+    flow->l4.tcp.tls.message.buffer_used += packet->payload_packet_len;
+}
+
+void ndpi_search_tls_tcp_memory_copy_actual_update_next_seq(struct ndpi_detection_module_struct *ndpi_struct,
+				struct ndpi_flow_struct *flow, struct ndpi_packet_struct *packet, u_int* avail_bytes) {
+    flow->l4.tcp.tls.message.next_seq[packet->packet_direction] = ntohl(packet->tcp->seq)+packet->payload_packet_len;
+}
+
+void ndpi_search_tls_tcp_memory_copy_actual(struct ndpi_detection_module_struct *ndpi_struct,
+				struct ndpi_flow_struct *flow, struct ndpi_packet_struct *packet, u_int* avail_bytes, u_int8_t * ok) {
+    if(ok) {
+      ndpi_search_tls_tcp_memory_copy_actual_memcpy(ndpi_struct, flow, packet, avail_bytes);
+
+      ndpi_search_tls_tcp_memory_copy_actual_increment_buffer_used(ndpi_struct, flow, packet, avail_bytes);
 #ifdef DEBUG_TLS_MEMORY
       printf("[TLS Mem] Copied data to buffer [%u/%u bytes][direction: %u][tcp_seq: %u][next: %u]\n",
 	     flow->l4.tcp.tls.message.buffer_used, flow->l4.tcp.tls.message.buffer_len,
@@ -212,8 +237,7 @@ void ndpi_search_tls_tcp_memory_copy(struct ndpi_detection_module_struct *ndpi_s
 	     ntohl(packet->tcp->seq),
 	     ntohl(packet->tcp->seq)+packet->payload_packet_len);
 #endif
-
-      flow->l4.tcp.tls.message.next_seq[packet->packet_direction] = ntohl(packet->tcp->seq)+packet->payload_packet_len;
+      ndpi_search_tls_tcp_memory_copy_actual_update_next_seq(ndpi_struct, flow, packet, avail_bytes);
     } else {
 #ifdef DEBUG_TLS_MEMORY
       printf("[TLS Mem] Skipping packet [%u bytes][direction: %u][tcp_seq: %u][expected next: %u]\n",
@@ -223,6 +247,21 @@ void ndpi_search_tls_tcp_memory_copy(struct ndpi_detection_module_struct *ndpi_s
 	     ntohl(packet->tcp->seq)+packet->payload_packet_len);
 #endif
     }
+}
+
+void ndpi_search_tls_tcp_memory_copy_internal(struct ndpi_detection_module_struct *ndpi_struct,
+				struct ndpi_flow_struct *flow, struct ndpi_packet_struct *packet, u_int* avail_bytes) {
+    
+    u_int8_t ok = 0;
+
+    ndpi_search_tls_tcp_memory_copy_check(ndpi_struct, flow, packet, avail_bytes, &ok);
+    ndpi_search_tls_tcp_memory_copy_actual(ndpi_struct, flow, packet, avail_bytes, &ok);
+}
+
+void ndpi_search_tls_tcp_memory_copy(struct ndpi_detection_module_struct *ndpi_struct,
+				struct ndpi_flow_struct *flow, struct ndpi_packet_struct *packet, u_int* avail_bytes) {
+    if(packet->payload_packet_len > 0 && *avail_bytes >= packet->payload_packet_len) {
+    ndpi_search_tls_tcp_memory_copy_internal(ndpi_struct, flow, packet, avail_bytes);
   }
 }
 
